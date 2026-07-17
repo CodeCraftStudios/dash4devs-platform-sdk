@@ -126,6 +126,44 @@ export declare class PortalModule {
   logout(): void;
 }
 
+/** The shape the staff directory returns — enough to assign work and administer. */
+export interface StaffMember {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  name: string;
+  role: "owner" | "admin" | "member";
+  is_active: boolean;
+  can_manage_users: boolean;
+  created_at: string;
+}
+
+export declare class StaffModule {
+  /** Operators on this platform (active only unless includeInactive). */
+  list(query?: { includeInactive?: boolean }): Promise<{ staff: StaffMember[] }>;
+  /** Invite/create an operator. */
+  create(payload: {
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    role?: "owner" | "admin" | "member";
+    password?: string;
+  }): Promise<{ staff: StaffMember }>;
+  /** Update role, active state, name or email. */
+  update(
+    id: string,
+    patch: {
+      email?: string;
+      first_name?: string;
+      last_name?: string;
+      role?: "owner" | "admin" | "member";
+      is_active?: boolean;
+      password?: string;
+    },
+  ): Promise<{ staff: StaffMember }>;
+}
+
 export interface WhoAmI {
   platform: {
     id: string;
@@ -147,6 +185,7 @@ export declare class PlatformClient {
   auth: AuthModule;
   records: RecordsModule;
   customers: CustomersModule;
+  staff: StaffModule;
   portal: PortalModule;
   setToken(token: string | null): void;
   whoami(): Promise<WhoAmI>;

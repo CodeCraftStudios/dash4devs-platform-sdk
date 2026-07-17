@@ -17,6 +17,7 @@ import { AuthModule } from "./services/auth.js";
 import { RecordsModule } from "./services/records.js";
 import { CustomersModule } from "./services/customers.js";
 import { PortalModule } from "./services/portal.js";
+import { StaffModule } from "./services/staff.js";
 
 const KEY_PATTERN = /^dfd-platform-(public|secret)-key-(live|test)-[A-Za-z0-9_-]{20,}$/;
 
@@ -85,6 +86,7 @@ export class PlatformClient {
     this.auth = new AuthModule(this);
     this.records = new RecordsModule(this);
     this.customers = new CustomersModule(this);
+    this.staff = new StaffModule(this);
     this.portal = new PortalModule(this);
   }
 
