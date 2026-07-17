@@ -38,3 +38,15 @@ export interface DashImageProps
 
 export function DashImage(props: DashImageProps): React.ReactElement | null;
 export default DashImage;
+
+export interface PoweredByProps {
+  /** Style it to fit your footer. */
+  className?: string;
+  /** Override the referral link (defaults to https://www.dashfordevs.com). */
+  href?: string;
+  /** Leading text (defaults to "Powered by"). */
+  label?: string;
+}
+
+/** "Powered by DashForDevs" credit strip — server-renderable, drop in a footer. */
+export function PoweredBy(props: PoweredByProps): React.ReactElement;
