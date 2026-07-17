@@ -163,6 +163,92 @@ export class PlatformClient {
   async whoami() {
     return this._fetch("/api/platform/whoami");
   }
+
+  /**
+   * Poll /api/platform/ping and decide whether the site should render normally.
+   *
+   * Never throws — a maintenance gate must not itself crash the page it guards.
+   * The contract is the single boolean `ok`:
+   *
+   *   ok: true   → serve the site normally
+   *   ok: false  → show the maintenance page (operator flipped it, OR backend
+   *                unreachable / 5xx / timed out)
+   *
+   * A 4xx (bad/expired key, wrong origin) is a *config* problem, not an outage,
+   * so it does NOT gate the site — masking it behind "be right back" would hide
+   * a bug the developer needs to see.
+   *
+   * @param {Object}  [opts]
+   * @param {number}  [opts.timeoutMs=2500] Abort the probe after this long.
+   * @returns {Promise<{ok:boolean, reachable:boolean, maintenance:boolean,
+   *   reason:string|null, message:string|null, until:string|null}>}
+   */
+  async checkHealth({ timeoutMs = 2500 } = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${this.baseURL}/api/platform/ping`, {
+        method: "GET",
+        headers: { "X-Platform-Key": this.key },
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      // 5xx / gateway (502/503/504) → backend is unhealthy → gate the site.
+      if (res.status >= 500) {
+        return {
+          ok: false,
+          reachable: true,
+          maintenance: true,
+          reason: `http_${res.status}`,
+          message: null,
+          until: null,
+        };
+      }
+
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch {
+        // reachable but no JSON — treat as a config/proxy oddity, not an outage.
+      }
+
+      if (!res.ok || !payload) {
+        return {
+          ok: true,
+          reachable: true,
+          maintenance: false,
+          reason: `http_${res.status}`,
+          message: null,
+          until: null,
+        };
+      }
+
+      const m = payload.maintenance || {};
+      // The API already coerces, but tolerate the "True" string quirk here too.
+      const inMaintenance = m.enabled === true || m.enabled === "true";
+      return {
+        ok: !inMaintenance,
+        reachable: true,
+        maintenance: inMaintenance,
+        reason: inMaintenance ? "operator" : null,
+        message: m.message || null,
+        until: m.until || null,
+      };
+    } catch (err) {
+      // Network failure or the abort timeout → backend is unreachable → gate.
+      return {
+        ok: false,
+        reachable: false,
+        maintenance: true,
+        reason: err && err.name === "AbortError" ? "timeout" : "unreachable",
+        message: null,
+        until: null,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 }
 
 export default PlatformClient;

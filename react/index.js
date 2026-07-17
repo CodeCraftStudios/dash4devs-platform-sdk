@@ -10,3 +10,4 @@
 
 export { DashImage, default as DashImageDefault } from "./DashImage.jsx";
 export { PoweredBy, default as PoweredByDefault } from "./PoweredBy.jsx";
+export { MaintenancePage, default as MaintenancePageDefault } from "./MaintenancePage.jsx";

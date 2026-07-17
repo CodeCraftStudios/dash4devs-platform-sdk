@@ -177,6 +177,22 @@ export interface WhoAmI {
   key: { kind: PlatformKeyKind; environment: PlatformEnvironment };
 }
 
+/** Result of a /api/platform/ping probe. `ok` is the one flag the gate acts on. */
+export interface HealthStatus {
+  /** true → serve the site; false → show the maintenance page. */
+  ok: boolean;
+  /** Did we get any response at all (vs. network error / timeout)? */
+  reachable: boolean;
+  /** Should a maintenance page be shown (operator flag OR backend down)? */
+  maintenance: boolean;
+  /** "operator" | "timeout" | "unreachable" | "http_5xx" | "no_client" | null */
+  reason: string | null;
+  /** Operator-supplied message, when maintenance was flipped on deliberately. */
+  message: string | null;
+  /** Optional "expected back" hint. */
+  until: string | null;
+}
+
 export declare class PlatformClient {
   constructor(options: { key: string; baseURL?: string; token?: string | null });
   readonly kind: PlatformKeyKind;
@@ -189,6 +205,8 @@ export declare class PlatformClient {
   portal: PortalModule;
   setToken(token: string | null): void;
   whoami(): Promise<WhoAmI>;
+  /** Poll the backend and decide whether to serve the site. Never throws. */
+  checkHealth(opts?: { timeoutMs?: number }): Promise<HealthStatus>;
   me(token: string): Promise<MeResult>;
   login(email: string, password: string): Promise<LoginResult>;
 }
@@ -197,5 +215,22 @@ export declare function createPlatformClient(options?: {
   key?: string;
   baseURL?: string;
 }): PlatformClient;
+
+/**
+ * Cached maintenance probe for a root layout / middleware. Caches "up" for
+ * `upTtlMs` and "down" for a shorter `downTtlMs` so recovery isn't sticky.
+ * Server-only (import from "dash4devs-platform/server").
+ */
+export declare function getMaintenanceStatus(options?: {
+  upTtlMs?: number;
+  downTtlMs?: number;
+  timeoutMs?: number;
+  force?: boolean;
+  key?: string;
+  baseURL?: string;
+}): Promise<HealthStatus>;
+
+/** Drop the cached probe so the next getMaintenanceStatus() re-checks live. */
+export declare function clearMaintenanceCache(): void;
 
 export default PlatformClient;

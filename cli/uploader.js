@@ -47,9 +47,17 @@ export async function uploadAll({ api, entries, needsUpload, concurrency = DEFAU
       }
       try {
         const body = fs.readFileSync(entry.absolute);
+        // These three headers are part of the signed request (the API bakes the
+        // public-read ACL + immutable cache into the presigned PUT), so they must
+        // be echoed verbatim or the signature won't match. This is what lets the
+        // server-side confirm step do zero S3 work.
         const res = await fetch(item.upload_url, {
           method: "PUT",
-          headers: { "Content-Type": entry.content_type || "application/octet-stream" },
+          headers: {
+            "Content-Type": entry.content_type || "application/octet-stream",
+            "x-amz-acl": "public-read",
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
           body,
         });
         if (!res.ok) throw new Error(`PUT ${res.status}`);

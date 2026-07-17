@@ -50,3 +50,31 @@ export interface PoweredByProps {
 
 /** "Powered by DashForDevs" credit strip — server-renderable, drop in a footer. */
 export function PoweredBy(props: PoweredByProps): React.ReactElement;
+
+export interface MaintenancePageProps {
+  /** Small brand label above the title (ignored if `logoUrl` is set). */
+  brand?: string;
+  /** Headline. Defaults to "We'll be right back". */
+  title?: string;
+  /** Body copy. Falls back to a generic maintenance message. */
+  message?: string | null;
+  /** Optional "expected back" hint. */
+  until?: string | null;
+  /** Logo image URL shown above the title. */
+  logoUrl?: string | null;
+  /** Support mailto shown at the bottom. */
+  supportEmail?: string | null;
+  /** Accent color for the dot / brand / links. Defaults to indigo. */
+  accent?: string;
+  /** Auto-reload interval in seconds so visitors recover hands-free. 0 disables. Default 30. */
+  refreshSeconds?: number;
+}
+
+/**
+ * Self-contained "we'll be right back" page the SDK falls back to when the
+ * backend is unreachable or maintenance is on. Inline-styled + server-renderable,
+ * so it works even if the CDN/stylesheets are down. Pair with getMaintenanceStatus().
+ */
+export function MaintenancePage(
+  props?: MaintenancePageProps,
+): React.ReactElement;

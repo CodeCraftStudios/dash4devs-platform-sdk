@@ -38,4 +38,78 @@ export function createPlatformClient({ key, baseURL } = {}) {
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Maintenance gate
+//
+// getMaintenanceStatus() is meant to sit in your root layout (or middleware) and
+// decide, per request, whether to render the site or <MaintenancePage/>. It caches
+// the probe in-process with a deliberately ASYMMETRIC TTL:
+//
+//   • "up"   is cached longer  (default 15s) — the happy path shouldn't ping the
+//     backend on every single request.
+//   • "down" is cached briefly (default 3s)  — THIS is the invalidation that
+//     matters: the moment the backend recovers (or the operator flips maintenance
+//     off), the stale "down" must expire fast so the site comes back on its own.
+//     A long TTL here would leave every visitor stuck on "be right back" for
+//     minutes after you're already healthy.
+//
+// The probe itself is fetched with cache:"no-store", so neither Next's data cache
+// nor a CDN can pin a stale pong underneath this layer. Call clearMaintenanceCache()
+// (or pass { force:true }) to invalidate immediately — e.g. right after you toggle
+// maintenance, so you don't wait out even the short TTL.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _healthCache = null; // { at:number, value:object }
+
+/**
+ * @param {Object}  [options]
+ * @param {number}  [options.upTtlMs=15000]   Cache a healthy result this long.
+ * @param {number}  [options.downTtlMs=3000]  Cache a down/maintenance result this
+ *                                            long — keep it short so recovery isn't sticky.
+ * @param {number}  [options.timeoutMs=2500]  Probe timeout.
+ * @param {boolean} [options.force=false]     Ignore the cache for this call.
+ * @param {string}  [options.key]             Overrides DASH_PLATFORM_KEY.
+ * @param {string}  [options.baseURL]         Overrides DASH_PLATFORM_API_URL.
+ */
+export async function getMaintenanceStatus(options = {}) {
+  const {
+    upTtlMs = 15_000,
+    downTtlMs = 3_000,
+    timeoutMs = 2_500,
+    force = false,
+    ...clientOptions
+  } = options;
+
+  const now = Date.now();
+  if (!force && _healthCache) {
+    const ttl = _healthCache.value.ok ? upTtlMs : downTtlMs;
+    if (now - _healthCache.at < ttl) return _healthCache.value;
+  }
+
+  let value;
+  try {
+    const client = createPlatformClient(clientOptions);
+    value = await client.checkHealth({ timeoutMs });
+  } catch (err) {
+    // No key configured, etc. Fail OPEN: a setup gap must not black out every
+    // page. The site's real SDK calls will surface the underlying error.
+    value = {
+      ok: true,
+      reachable: false,
+      maintenance: false,
+      reason: "no_client",
+      message: null,
+      until: null,
+    };
+  }
+
+  _healthCache = { at: now, value };
+  return value;
+}
+
+/** Drop the cached probe so the next getMaintenanceStatus() re-checks live. */
+export function clearMaintenanceCache() {
+  _healthCache = null;
+}
+
 export { PlatformClient };
