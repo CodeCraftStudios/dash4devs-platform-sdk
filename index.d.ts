@@ -136,20 +136,27 @@ export interface StaffMember {
   role: "owner" | "admin" | "member";
   is_active: boolean;
   can_manage_users: boolean;
+  /** null = invited but never signed in (pending). Set once they accept/log in. */
+  last_login_at: string | null;
   created_at: string;
 }
 
 export declare class StaffModule {
   /** Operators on this platform (active only unless includeInactive). */
   list(query?: { includeInactive?: boolean }): Promise<{ staff: StaffMember[] }>;
-  /** Invite/create an operator. */
+  /**
+   * Invite/create an operator. Omit `password` to send an invite — the response
+   * carries `invite_token` for the accept link.
+   */
   create(payload: {
     email: string;
     first_name?: string;
     last_name?: string;
     role?: "owner" | "admin" | "member";
     password?: string;
-  }): Promise<{ staff: StaffMember }>;
+  }): Promise<{ staff: StaffMember; invite_token?: string }>;
+  /** Accept an invite: set the invited operator's password from the signed token. */
+  accept(payload: { token: string; password: string }): Promise<{ staff: StaffMember }>;
   /** Update role, active state, name or email. */
   update(
     id: string,
@@ -162,6 +169,8 @@ export declare class StaffModule {
       password?: string;
     },
   ): Promise<{ staff: StaffMember }>;
+  /** Revoke a pending invite (deletes the account). Fails for accepted members. */
+  remove(id: string): Promise<{ ok: boolean }>;
 }
 
 export interface WhoAmI {
