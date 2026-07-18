@@ -18,6 +18,7 @@ import { RecordsModule } from "./services/records.js";
 import { CustomersModule } from "./services/customers.js";
 import { PortalModule } from "./services/portal.js";
 import { StaffModule } from "./services/staff.js";
+import { EmailModule } from "./services/email.js";
 
 const KEY_PATTERN = /^dfd-platform-(public|secret)-key-(live|test)-[A-Za-z0-9_-]{20,}$/;
 
@@ -88,6 +89,7 @@ export class PlatformClient {
     this.customers = new CustomersModule(this);
     this.staff = new StaffModule(this);
     this.portal = new PortalModule(this);
+    this.email = new EmailModule(this);
   }
 
   /** Resolve a token to its subject. See services/auth.js. */

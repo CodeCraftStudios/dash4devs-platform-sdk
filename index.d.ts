@@ -193,6 +193,26 @@ export interface HealthStatus {
   until: string | null;
 }
 
+export interface SendEmailOptions {
+  /** Recipient address(es). */
+  to: string | string[];
+  subject: string;
+  /** HTML body — provide html or text. */
+  html?: string;
+  /** Plain-text body. */
+  text?: string;
+  /** Override the platform's configured Resend sender. */
+  from?: string;
+  replyTo?: string;
+  cc?: string | string[];
+  bcc?: string | string[];
+}
+
+export declare class EmailModule {
+  /** Send transactional email via the platform's own Resend key. Server-side only. */
+  send(opts: SendEmailOptions): Promise<{ ok: boolean; id: string }>;
+}
+
 export declare class PlatformClient {
   constructor(options: { key: string; baseURL?: string; token?: string | null });
   readonly kind: PlatformKeyKind;
@@ -203,6 +223,7 @@ export declare class PlatformClient {
   customers: CustomersModule;
   staff: StaffModule;
   portal: PortalModule;
+  email: EmailModule;
   setToken(token: string | null): void;
   whoami(): Promise<WhoAmI>;
   /** Poll the backend and decide whether to serve the site. Never throws. */
