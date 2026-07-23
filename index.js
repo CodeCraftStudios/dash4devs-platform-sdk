@@ -19,6 +19,7 @@ import { CustomersModule } from "./services/customers.js";
 import { PortalModule } from "./services/portal.js";
 import { StaffModule } from "./services/staff.js";
 import { EmailModule } from "./services/email.js";
+import { FilesModule } from "./services/files.js";
 
 const KEY_PATTERN = /^dfd-platform-(public|secret)-key-(live|test)-[A-Za-z0-9_-]{20,}$/;
 
@@ -90,6 +91,7 @@ export class PlatformClient {
     this.staff = new StaffModule(this);
     this.portal = new PortalModule(this);
     this.email = new EmailModule(this);
+    this.files = new FilesModule(this);
   }
 
   /** Resolve a token to its subject. See services/auth.js. */
@@ -114,7 +116,11 @@ export class PlatformClient {
   async _fetch(path, options = {}) {
     const headers = {
       "X-Platform-Key": this.key,
-      "Content-Type": "application/json",
+      // A FormData body must NOT get an explicit Content-Type — fetch sets the
+      // multipart boundary itself, and overriding it breaks the upload.
+      ...(options.body instanceof FormData
+        ? {}
+        : { "Content-Type": "application/json" }),
       ...options.headers,
     };
 

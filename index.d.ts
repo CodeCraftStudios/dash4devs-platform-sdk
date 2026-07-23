@@ -222,6 +222,130 @@ export declare class EmailModule {
   send(opts: SendEmailOptions): Promise<{ ok: boolean; id: string }>;
 }
 
+/** A file in the platform's media library. `url` is a plain permanent CDN URL. */
+export interface PlatformFileRecord {
+  id: string;
+  name: string;
+  /** Stable per-platform handle ("home-hero"); "" when unset. */
+  label: string;
+  url: string;
+  original_filename: string;
+  file_type: "image" | "video" | "document" | "other";
+  content_type: string;
+  size_bytes: number;
+  /** Human-readable size, e.g. "1.2 MB". */
+  file_size_display: string;
+  alt: string;
+  description: string;
+  width: number | null;
+  height: number | null;
+  tags: string[];
+  metadata: Record<string, unknown>;
+  display_order: number;
+  folder_id: string | null;
+  customer: string | null;
+  website_record: string | null;
+  created_at: string | null;
+}
+
+export interface PlatformFileFolder {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  /** Full path from the root, e.g. "Brand/Logos". */
+  path: string;
+  created_at: string | null;
+}
+
+export interface FileListQuery {
+  /** Folder id, or "root" for the top level. Absent = everywhere. */
+  folder_id?: string;
+  file_type?: "image" | "video" | "document" | "other";
+  search?: string;
+  tag?: string;
+  metadata_key?: string;
+  metadata_value?: string;
+  customer?: string;
+  website_record?: string;
+  label?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface FileListPagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
+export interface FileUploadMeta {
+  name?: string;
+  alt?: string;
+  description?: string;
+  folder_id?: string;
+  /** Comma-separated. */
+  tags?: string;
+  metadata?: Record<string, unknown>;
+  label?: string;
+  customer?: string;
+  website_record?: string;
+}
+
+export interface FileUpdatePatch {
+  name?: string;
+  alt?: string;
+  description?: string;
+  /** Replaces the whole tag list. */
+  tags?: string[];
+  /** MERGED — send { key: null } to delete a key. */
+  metadata?: Record<string, unknown>;
+  /** null moves the file to the root. */
+  folder_id?: string | null;
+  label?: string;
+  customer?: string | null;
+  website_record?: string | null;
+  is_active?: boolean;
+}
+
+export declare class FileFoldersModule {
+  /** All folders by default (each carries its full path), or one level via parent_id. */
+  list(query?: {
+    parent_id?: string;
+  }): Promise<{ folders: PlatformFileFolder[] }>;
+  create(payload: {
+    name: string;
+    parent_id?: string;
+  }): Promise<{ folder: PlatformFileFolder }>;
+  /** Delete a folder — its files and subfolders move up to the parent. */
+  delete(id: string): Promise<{ deleted: boolean }>;
+}
+
+export declare class FilesModule {
+  list(query?: FileListQuery): Promise<{
+    files: PlatformFileRecord[];
+    total: number;
+    limit: number;
+    offset: number;
+    pagination: FileListPagination;
+  }>;
+  get(id: string): Promise<{ file: PlatformFileRecord }>;
+  /** Upload (multipart). Pass a File/Blob, or a FormData whose "file" part is set. */
+  upload(
+    file: File | Blob | FormData,
+    meta?: FileUploadMeta
+  ): Promise<{ file: PlatformFileRecord }>;
+  /** Metadata only — the binary is immutable (upload a new file instead). */
+  update(id: string, patch: FileUpdatePatch): Promise<{ file: PlatformFileRecord }>;
+  /** Delete a file — removes the CDN object too. */
+  delete(id: string): Promise<{ deleted: boolean }>;
+  /** Persist a manual ordering: the array's index becomes display_order. */
+  reorder(ids: string[]): Promise<{ reordered: number }>;
+  folders: FileFoldersModule;
+}
+
 export declare class PlatformClient {
   constructor(options: { key: string; baseURL?: string; token?: string | null });
   readonly kind: PlatformKeyKind;
@@ -233,6 +357,7 @@ export declare class PlatformClient {
   staff: StaffModule;
   portal: PortalModule;
   email: EmailModule;
+  files: FilesModule;
   setToken(token: string | null): void;
   whoami(): Promise<WhoAmI>;
   /** Poll the backend and decide whether to serve the site. Never throws. */
