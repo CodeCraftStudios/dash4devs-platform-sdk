@@ -243,6 +243,8 @@ export interface PlatformFileRecord {
   metadata: Record<string, unknown>;
   display_order: number;
   folder_id: string | null;
+  /** The owning project's record id (each project has its own library). */
+  project: string | null;
   customer: string | null;
   website_record: string | null;
   created_at: string | null;
@@ -260,6 +262,8 @@ export interface PlatformFileFolder {
 export interface FileListQuery {
   /** Folder id, or "root" for the top level. Absent = everywhere. */
   folder_id?: string;
+  /** Project record id — each project owns its media. "none" = unscoped pool. */
+  project?: string;
   file_type?: "image" | "video" | "document" | "other";
   search?: string;
   tag?: string;
@@ -282,6 +286,8 @@ export interface FileListPagination {
 }
 
 export interface FileUploadMeta {
+  /** Project record id — scope the upload to that project's library. */
+  project?: string;
   name?: string;
   alt?: string;
   description?: string;
@@ -304,6 +310,8 @@ export interface FileUpdatePatch {
   metadata?: Record<string, unknown>;
   /** null moves the file to the root. */
   folder_id?: string | null;
+  /** Project record id; null unscopes. */
+  project?: string | null;
   label?: string;
   customer?: string | null;
   website_record?: string | null;
